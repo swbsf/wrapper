@@ -13,7 +13,7 @@ func getCurrentContext() (string, api.Config) {
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{Precedence: strings.Split(os.Getenv("KUBECONFIG"), ":")},
 		&clientcmd.ConfigOverrides{
-				CurrentContext: "",
+			CurrentContext: "",
 		}).RawConfig()
 	if err != nil {
 		panic(err)
@@ -31,7 +31,7 @@ func switchContext(kubectx string, config api.Config) error {
 func validateContext(forceContext bool) {
 	cfg := getConfig()
 	ctx, _ := getCurrentContext()
-	if ! strings.Contains(ctx, cfg.Vcluster.HostContextName){
+	if !strings.Contains(ctx, cfg.Vcluster.HostContextName) {
 		fmt.Printf("Please use correct kubeconfig: %s instead of %s\n", cfg.Vcluster.HostContextName, ctx)
 		os.Exit(1)
 	}
