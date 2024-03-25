@@ -19,8 +19,7 @@ const (
 	Kubectl          = "kubectl"
 )
 
-func containerConfig(entrypoint Program, cmd strslice.StrSlice) container.Config {
-	config := getConfig()
+func containerConfig(config Config, entrypoint Program, cmd strslice.StrSlice) container.Config {
 	return container.Config{
 		Image: config.Vcluster.ImageName,
 		Env: []string{

@@ -15,8 +15,6 @@ type ApiResponse struct {
 	Data string `json:"data"`
 }
 
-const ErrBranchNotFound = "branch not found"
-
 func main() {
 	var init bool
 	var switchContext bool
@@ -28,96 +26,21 @@ func main() {
 		Short: "A CLI for making API calls",
 		Long:  `A CLI for making API calls to various services`,
 	}
-	//var testCmd = &cobra.Command{
-	//  Use:   "d",
-	//  Short: "List all deployed vcluster",
-	//  Args:  cobra.ExactArgs(0),
-	//  Run: func(cmd *cobra.Command, args []string) {
-	//    config, _ := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-	//      &clientcmd.ClientConfigLoadingRules{Precedence: strings.Split(os.Getenv("KUBECONFIG"), ":")},
-	//      &clientcmd.ConfigOverrides{
-	//          CurrentContext: "",
-	//      }).RawConfig()
-	//    fmt.Println(config.CurrentContext)
-	//  },
-	//}
-	//var getCmd = &cobra.Command{
-	//  Use:   "get",
-	//  Short: "Make a GET request to an API endpoint",
-	//  Long:  `Make a GET request to an API endpoint and print the response`,
-	//  Args:  cobra.ExactArgs(1),
-	//  Run: func(cmd *cobra.Command, args []string) {
-	//    url := args[0]
-	//    fmt.Println(url)
-	//    resp, err := http.Get(url)
-	//    if err != nil {
-	//      fmt.Println("Error making GET request:", err)
-	//      os.Exit(1)
-	//    }
-	//    defer resp.Body.Close()
-	//
-	//    body, err := io.ReadAll(resp.Body)
-	//    fmt.Println(string(body))
-	//    if err != nil {
-	//      fmt.Println("Error reading response body:", err)
-	//      os.Exit(1)
-	//    }
-	//
-	//    var apiResponse ApiResponse
-	//    err = json.Unmarshal(body, &apiResponse)
-	//    if err != nil {
-	//      fmt.Println("Error unmarshalling response:", err)
-	//      os.Exit(1)
-	//    }
-	//
-	//    fmt.Println("API response:", apiResponse)
-	//  },
-	//}
-	//
-	//var postCmd = &cobra.Command{
-	//  Use:   "post",
-	//  Short: "Make a POST request to an API endpoint",
-	//  Long:  `Make a POST request to an API endpoint and print the response`,
-	//  Args:  cobra.ExactArgs(1),
-	//  Run: func(cmd *cobra.Command, args []string) {
-	//    url := args[0]
-	//    data := []byte(`{"key": "value"}`)
-	//    resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
-	//    if err != nil {
-	//      fmt.Println("Error making POST request:", err)
-	//      os.Exit(1)
-	//    }
-	//    defer resp.Body.Close()
-	//
-	//    body, err := io.ReadAll(resp.Body)
-	//    if err != nil {
-	//      fmt.Println("Error reading response body:", err)
-	//      os.Exit(1)
-	//    }
-	//
-	//    var apiResponse ApiResponse
-	//    err = json.Unmarshal(body, &apiResponse)
-	//    if err != nil {
-	//      fmt.Println("Error unmarshalling response:", err)
-	//      os.Exit(1)
-	//    }
-	//
-	//    fmt.Println("API response:", apiResponse.Data)
-	//  },
-	//}
+
 	var vclusterListCmd = &cobra.Command{
 		Use:   "list",
 		Short: "List all deployed vcluster",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			validateContext(switchContext)
+      mainConf := getConfig("")
+			_ = validateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
 			}
 			ctx := context.Background()
 
-			cfg := containerConfig(Vcluster, strslice.StrSlice{"list"})
+			cfg := containerConfig(mainConf, Vcluster, strslice.StrSlice{"list"})
 			hostCfg := hostConfig()
 			if err != nil {
 				panic(err)
@@ -131,21 +54,23 @@ func main() {
 		Long:  `Grab vcluster Kubeconfig and use it.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			validateContext(switchContext)
+      mainConf := getConfig(args[0])
+			kubeconf := validateContext(mainConf)
+      dumpKubeconf(mainConf, kubeconf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
 			}
 			ctx := context.Background()
-			config := getConfig()
+			config := getConfig(args[0])
 
-			cfg := containerConfig(Vcluster, strslice.StrSlice{
+			cfg := containerConfig(mainConf, Vcluster, strslice.StrSlice{
 				"connect",
 				args[0],
 				"-n",
 				config.Vcluster.Namespace,
-				fmt.Sprintf("--server=https://%s.%s", args[0], config.Vcluster.BaseHost),
-				fmt.Sprintf("--kube-config=%s.yaml", args[0]),
+				fmt.Sprintf("--server=https://%s.%s", args[0], config.Vcluster.HostFqdn),
+				fmt.Sprintf("--kube-config=%s", mainConf.Runtime.KubeconfPath),
 			})
 			hostCfg := hostConfig()
 
@@ -157,19 +82,19 @@ func main() {
 		Short: "Remove a vcluster",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			validateContext(switchContext)
+      mainConf := getConfig(args[0])
+			_ = validateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
 			}
 			ctx := context.Background()
-			config := getConfig()
 
-			cfg := containerConfig(Vcluster, strslice.StrSlice{
+			cfg := containerConfig(mainConf, Vcluster, strslice.StrSlice{
 				"delete",
 				args[0],
 				"-n",
-				config.Vcluster.Namespace,
+				mainConf.Vcluster.Namespace,
 			})
 			hostCfg := hostConfig()
 
@@ -182,13 +107,13 @@ func main() {
 		Long:  `Create a vcluster, choose a name.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			validateContext(switchContext)
+      mainConf := getConfig(args[0])
+			_ = validateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
 			}
 			ctx := context.Background()
-			config := getConfig()
 
 			cliArgs := strslice.StrSlice{}
 			// Allow local values.yaml to be used to deploy cluster
@@ -199,9 +124,9 @@ func main() {
 					"--set",
 					"ingress.ingressClassName=nginx",
 					"--set",
-					fmt.Sprintf("ingress.host=%s.%s", args[0], config.Vcluster.BaseHost),
+					fmt.Sprintf("ingress.host=%s.%s", args[0], mainConf.Vcluster.HostFqdn),
 					"--set",
-					fmt.Sprintf("syncer.extraArgs.0=--tls-san=%s.%s", args[0], config.Vcluster.BaseHost),
+					fmt.Sprintf("syncer.extraArgs.0=--tls-san=%s.%s", args[0], mainConf.Vcluster.HostFqdn),
 				}
 			} else {
 				cliArgs = strslice.StrSlice{
@@ -214,14 +139,14 @@ func main() {
 				"create",
 				args[0],
 				"-n",
-				config.Vcluster.Namespace,
+				mainConf.Vcluster.Namespace,
 				"--connect=false",
 				"--upgrade",
 				"--kubernetes-version",
 				kubeVersion,
 			}
 
-			cfg := containerConfig(Vcluster, append(baseArgs, cliArgs...))
+			cfg := containerConfig(mainConf, Vcluster, append(baseArgs, cliArgs...))
 			hostCfg := hostConfig()
 
 			runContainer(ctx, cli, &cfg, &hostCfg)
@@ -235,8 +160,8 @@ func main() {
       Please provide vcluster name as first argument.`,
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg := getConfig()
-			gitcfg := initGitConfig(args[0])
+			mainConf := getConfig(args[0])
+			gitcfg := initGitConfig(mainConf)
 			err := gitBranchCheckout(gitcfg)
 			if err != nil {
 				panic(err)
@@ -244,13 +169,13 @@ func main() {
 
 			// Init repo by templating it with copier
 			if init {
-				config := containerConfig(Copier, strslice.StrSlice{
+				config := containerConfig(mainConf, Copier, strslice.StrSlice{
 					"copy",
 					"-f",
 					"-r",
 					skelBranch,
-					cfg.Git.SkeletonRepo,
-					cfg.Git.SourceFolder,
+					mainConf.Git.SkeletonRepo,
+					mainConf.Runtime.SourceFolder,
 					"--trust",
 					"--data",
 					fmt.Sprintf("cluster_name=%s", gitcfg.branchNameSlug),
@@ -263,7 +188,7 @@ func main() {
 				}
 				runContainer(cmd.Context(), cli, &config, &hostCfg)
 			}
-			fmt.Printf("Branch has been templated, please review/commit/push in folder %s to trigger Hemera deployment.\n", cfg.Git.SourceFolder)
+			fmt.Printf("Branch has been templated, please review/commit/push in folder %s to trigger Hemera deployment.\n", mainConf.Runtime.SourceFolder)
 		},
 	}
 	var hemeraDeployCmd = &cobra.Command{
@@ -271,13 +196,27 @@ func main() {
 		Short: "Basically does a git push. Please provide vcluster name you want to deploy to.",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := initGitConfig(args[0])
+      cfg := getConfig(args[0])
+			repo := initGitConfig(cfg)
+      gitlab := gitlabClient(repo)
+
+      // Push env variables for CI
+      gitlab.gitlabAddOrUpdateVariable(GitlabVar{
+        Name: "CLEYROP_DOMAIN_NAME",
+        Value: cfg.Vcluster.ChildBaseFqdn,
+      })
+      gitlab.gitlabAddOrUpdateVariable(GitlabVar{
+        Name: "KUBE_CONFIG",
+        Value: getKubeConfAsString(cfg),
+      })
+
 			commit, err := gitAddCommitPush(repo)
 
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("Branch %s, was pushed to %s with commit %s\n", repo.branchName, repo.WrapperConf.Git.DeployRepo, commit)
+
+			fmt.Printf("Branch %s, was pushed to %s with commit %s\n", repo.branchName, cfg.Git.DeployRepo, commit)
 		},
 	}
 

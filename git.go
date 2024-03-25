@@ -25,7 +25,7 @@ type GitConfig struct {
 }
 
 func gitClone(gitcfg GitConfig) *git.Repository {
-	r, err := git.PlainClone(gitcfg.WrapperConf.Git.SourceFolder, false, &git.CloneOptions{
+	r, err := git.PlainClone(gitcfg.WrapperConf.Runtime.SourceFolder, false, &git.CloneOptions{
 		Auth: &http.BasicAuth{
 			Username: gitcfg.Username, // yes, this can be anything except an empty string
 			Password: gitcfg.Password,
@@ -66,41 +66,47 @@ func gitBranchCheckout(gitcfg GitConfig) error {
 
 func gitAddCommitPush(gitcfg GitConfig) (plumbing.Hash, error) {
 	w, _ := gitcfg.repoClient.Worktree()
-	_, err := w.Add(".")
-	if err != nil {
-		return plumbing.ZeroHash, err
-	}
+	st, _ := w.Status()
 
-	commit, err := w.Commit("Deploying Hemera", &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  gitcfg.WrapperConf.Git.CommitOwnerName,
-			Email: gitcfg.WrapperConf.Git.CommitOwnerEmail,
-			When:  time.Now(),
-		},
-	})
-	if err != nil {
+	if ! st.IsClean() {
+		_, err := w.Add(".")
+		if err != nil {
+			return plumbing.ZeroHash, err
+		}
+
+		commit, err := w.Commit("Deploying Hemera", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  gitcfg.WrapperConf.Git.CommitOwnerName,
+				Email: gitcfg.WrapperConf.Git.CommitOwnerEmail,
+				
+				When:  time.Now(),
+			},
+		})
+		if err != nil {
+			return commit, err
+		}
+
+		remote, _ := gitcfg.repoClient.Remote(gitcfg.remoteName)
+
+		err = remote.Push(&git.PushOptions{
+			RemoteName: gitcfg.remoteName,
+			RefSpecs: []config.RefSpec{
+				config.RefSpec(fmt.Sprintf("%s:%s", gitcfg.branchNameRef, gitcfg.branchNameRef)),
+			},
+			Auth: &http.BasicAuth{
+				Username: gitcfg.Username,
+				Password: gitcfg.Password,
+			},
+		})
 		return commit, err
+	} else {
+		fmt.Println("Local folder is clean, nothing to commit.")
 	}
-
-	remote, _ := gitcfg.repoClient.Remote(gitcfg.remoteName)
-
-	err = remote.Push(&git.PushOptions{
-		RemoteName: gitcfg.remoteName,
-		RefSpecs: []config.RefSpec{
-			config.RefSpec(fmt.Sprintf("%s:%s", gitcfg.branchNameRef, gitcfg.branchNameRef)),
-		},
-		Auth: &http.BasicAuth{
-			Username: gitcfg.Username,
-			Password: gitcfg.Password,
-		},
-	})
-
-	return commit, err
+	return plumbing.ZeroHash, nil
 }
 
-func initGitConfig(vclusterName string) GitConfig {
-	branchName := fmt.Sprintf("env/%s", vclusterName)
-	cfg := getConfig()
+func initGitConfig(cfg Config) GitConfig {
+	branchName := fmt.Sprintf("env/%s", cfg.Runtime.VclusterName)
 	gitcfg := GitConfig{
 		branchName:     branchName,
 		branchNameSlug: strings.ReplaceAll(branchName, "/", "-"),
@@ -110,7 +116,7 @@ func initGitConfig(vclusterName string) GitConfig {
 		Password:       os.Getenv("GITLAB_ACCESS_TOKEN"),
 		WrapperConf:    cfg,
 	}
-	repoClient, err := git.PlainOpen(cfg.Git.SourceFolder)
+	repoClient, err := git.PlainOpen(cfg.Runtime.SourceFolder)
 	gitcfg.repoClient = repoClient
 	if err != nil {
 		if err == git.ErrRepositoryNotExists {

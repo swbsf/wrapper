@@ -7,13 +7,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-//const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
-
 type Config struct {
 	Vcluster struct {
 		ImageName       string `yaml:"imageName"`
 		Namespace       string `yaml:"namespace"`
-		BaseHost        string `yaml:"baseHost"`
+		HostFqdn        string `yaml:"baseFqdn"`
+		ChildBaseFqdn   string `yaml:"childBaseFqdn"`
 		HostContextName string `yaml:"hostContextName"`
 	} `yaml:"vcluster"`
 	Git struct {
@@ -25,27 +24,26 @@ type Config struct {
 		Username         string `yaml:"username"`
 		Password         string `yaml:"password"`
 	} `yaml:"git"`
+	Runtime struct {
+		VclusterName		 string `yaml:"vclusterName"`
+		SourceFolder     string `yaml:"sourceFolder"`
+		KubeconfPath     string `yaml:"kubeconfPath"`
+	} `yaml:"runtime"`
 }
 
-//func RandStringBytes(n int) string {
-//	b := make([]byte, n)
-//	for i := range b {
-//			b[i] = letters[rand.Intn(len(letters))]
-//	}
-//	return string(b)
-//}
+func setRuntimeConfig(cfg *Config, vclusterName string) {
+	cfg.Runtime.VclusterName = vclusterName
+	cfg.Runtime.SourceFolder = cfg.Git.SourceFolder + "/" + vclusterName
+	cfg.Runtime.KubeconfPath = cfg.Git.SourceFolder + "/kube-" + vclusterName + ".yaml"
+}
 
-func getConfig() Config {
+func getConfig(vclusterName string) Config {
 	config := Config{
-		Vcluster: struct {
-			ImageName       string "yaml:\"imageName\""
-			Namespace       string "yaml:\"namespace\""
-			BaseHost        string "yaml:\"baseHost\""
-			HostContextName string "yaml:\"hostContextName\""
-		}{
+		Vcluster: struct{ImageName string "yaml:\"imageName\""; Namespace string "yaml:\"namespace\""; HostFqdn string "yaml:\"baseFqdn\""; ChildBaseFqdn string "yaml:\"childBaseFqdn\""; HostContextName string "yaml:\"hostContextName\""}{
 			ImageName:       "vcluster",
 			Namespace:       "vclusters",
-			BaseHost:        "steven.env.devops.cleyrop.tech",
+			HostFqdn:        "steven.env.devops.cleyrop.tech",
+			ChildBaseFqdn:   "changeme.env.devops.cleyrop.tech",
 			HostContextName: "",
 		},
 		Git: struct {
@@ -84,5 +82,6 @@ func getConfig() Config {
 		fmt.Println("No credentials found. Please set GITLAB_ACCESS_TOKEN env var or git.password in config.yaml to continue...")
 		os.Exit(1)
 	}
+	setRuntimeConfig(&config,vclusterName)
 	return config
 }
