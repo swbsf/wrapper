@@ -25,10 +25,10 @@ type Config struct {
 		Password         string `yaml:"password"`
 	} `yaml:"git"`
 	Runtime struct {
-		VclusterName		 string `yaml:"vclusterName"`
-		SourceFolder     string `yaml:"sourceFolder"`
-		KubeconfPath     string `yaml:"kubeconfPath"`
-		VclusterFqdn     string `yaml:"vclusterFqdn"`
+		VclusterName string `yaml:"vclusterName"`
+		SourceFolder string `yaml:"sourceFolder"`
+		KubeconfPath string `yaml:"kubeconfPath"`
+		VclusterFqdn string `yaml:"vclusterFqdn"`
 	} `yaml:"runtime"`
 }
 
@@ -41,7 +41,13 @@ func setRuntimeConfig(cfg *Config, vclusterName string) {
 
 func getConfig(vclusterName string) Config {
 	config := Config{
-		Vcluster: struct{ImageName string "yaml:\"imageName\""; Namespace string "yaml:\"namespace\""; HostFqdn string "yaml:\"baseFqdn\""; ChildBaseFqdn string "yaml:\"childBaseFqdn\""; HostContextName string "yaml:\"hostContextName\""}{
+		Vcluster: struct {
+			ImageName       string "yaml:\"imageName\""
+			Namespace       string "yaml:\"namespace\""
+			HostFqdn        string "yaml:\"baseFqdn\""
+			ChildBaseFqdn   string "yaml:\"childBaseFqdn\""
+			HostContextName string "yaml:\"hostContextName\""
+		}{
 			ImageName:       "vcluster",
 			Namespace:       "vclusters",
 			HostFqdn:        "steven.env.devops.cleyrop.tech",
@@ -84,6 +90,6 @@ func getConfig(vclusterName string) Config {
 		fmt.Println("No credentials found. Please set GITLAB_ACCESS_TOKEN env var or git.password in config.yaml to continue...")
 		os.Exit(1)
 	}
-	setRuntimeConfig(&config,vclusterName)
+	setRuntimeConfig(&config, vclusterName)
 	return config
 }

@@ -68,7 +68,7 @@ func gitAddCommitPush(gitcfg GitConfig) (plumbing.Hash, error) {
 	w, _ := gitcfg.repoClient.Worktree()
 	st, _ := w.Status()
 
-	if ! st.IsClean() {
+	if !st.IsClean() {
 		_, err := w.Add(".")
 		if err != nil {
 			return plumbing.ZeroHash, err
@@ -78,8 +78,8 @@ func gitAddCommitPush(gitcfg GitConfig) (plumbing.Hash, error) {
 			Author: &object.Signature{
 				Name:  gitcfg.WrapperConf.Git.CommitOwnerName,
 				Email: gitcfg.WrapperConf.Git.CommitOwnerEmail,
-				
-				When:  time.Now(),
+
+				When: time.Now(),
 			},
 		})
 		if err != nil {

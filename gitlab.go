@@ -12,9 +12,9 @@ type GitlabVar struct {
 }
 
 type GitlabClient struct {
-	client   *gitlab.Client
-	conf     GitConfig
-	projid   int
+	client *gitlab.Client
+	conf   GitConfig
+	projid int
 }
 
 func gitlabClient(gitcfg GitConfig) GitlabClient {
@@ -32,13 +32,13 @@ func gitlabClient(gitcfg GitConfig) GitlabClient {
 
 	return GitlabClient{
 		client: git,
-		conf: gitcfg,
+		conf:   gitcfg,
 		projid: proj[0].ID,
 	}
 }
 
 func (g *GitlabClient) getGitlabVar(v GitlabVar) *gitlab.ProjectVariable {
-	varContent,resp,err := g.client.ProjectVariables.GetVariable(g.projid,v.Name,&gitlab.GetProjectVariableOptions{
+	varContent, resp, err := g.client.ProjectVariables.GetVariable(g.projid, v.Name, &gitlab.GetProjectVariableOptions{
 		Filter: &gitlab.VariableFilter{
 			EnvironmentScope: g.conf.branchNameSlug,
 		},
@@ -58,13 +58,13 @@ func (g *GitlabClient) gitlabVarExists(v GitlabVar) bool {
 func (g *GitlabClient) updateVariable(v GitlabVar) error {
 	raw := true
 	protected := true
-	_, _, err := g.client.ProjectVariables.UpdateVariable(g.projid,v.Name,&gitlab.UpdateProjectVariableOptions{
-		Value: &v.Value,
+	_, _, err := g.client.ProjectVariables.UpdateVariable(g.projid, v.Name, &gitlab.UpdateProjectVariableOptions{
+		Value:            &v.Value,
 		EnvironmentScope: &g.conf.branchNameSlug,
 		Filter: &gitlab.VariableFilter{
 			EnvironmentScope: g.conf.branchNameSlug,
 		},
-		Raw: &raw,
+		Raw:       &raw,
 		Protected: &protected,
 	})
 	return err
@@ -74,11 +74,11 @@ func (g *GitlabClient) createVariable(v GitlabVar) error {
 	raw := true
 	protected := true
 	options := &gitlab.CreateProjectVariableOptions{
-		Key: &v.Name,
-		Value: &v.Value,
+		Key:              &v.Name,
+		Value:            &v.Value,
 		EnvironmentScope: &g.conf.branchNameSlug,
-		Raw: &raw,
-		Protected: &protected,
+		Raw:              &raw,
+		Protected:        &protected,
 	}
 	_, _, err := g.client.ProjectVariables.CreateVariable(g.projid, options)
 	return err

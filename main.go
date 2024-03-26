@@ -32,7 +32,7 @@ func main() {
 		Short: "List all deployed vcluster",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-      mainConf := getConfig("")
+			mainConf := getConfig("")
 			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
@@ -54,7 +54,7 @@ func main() {
 		Long:  `Grab vcluster Kubeconfig and use it.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-      mainConf := getConfig(args[0])
+			mainConf := getConfig(args[0])
 			// Only validating context here
 			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -78,8 +78,8 @@ func main() {
 			kubeconf := getAndValidateContext(mainConf)
 			runContainer(ctx, cli, &cfg, &hostCfg)
 			// hacky way to force new kube context, I'm pretty sure we can find something better
-			kubeconf.CurrentContext = fmt.Sprintf("vcluster_%s_vclusters_%s", mainConf.Runtime.VclusterName, mainConf.Vcluster.HostContextName )
-      dumpKubeconf(mainConf, kubeconf)
+			kubeconf.CurrentContext = fmt.Sprintf("vcluster_%s_vclusters_%s", mainConf.Runtime.VclusterName, mainConf.Vcluster.HostContextName)
+			dumpKubeconf(mainConf, kubeconf)
 		},
 	}
 	var vclusterDeleteCmd = &cobra.Command{
@@ -87,7 +87,7 @@ func main() {
 		Short: "Remove a vcluster",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-      mainConf := getConfig(args[0])
+			mainConf := getConfig(args[0])
 			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
@@ -112,7 +112,7 @@ func main() {
 		Long:  `Create a vcluster, choose a name.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-      mainConf := getConfig(args[0])
+			mainConf := getConfig(args[0])
 			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
@@ -173,7 +173,7 @@ func main() {
 			}
 
 			// Init repo by templating it with copier
-			if ! noInit {
+			if !noInit {
 				config := containerConfig(mainConf, Copier, strslice.StrSlice{
 					"copy",
 					"-f",
@@ -201,19 +201,19 @@ func main() {
 		Short: "Basically does a git push. Please provide vcluster name you want to deploy to.",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-      cfg := getConfig(args[0])
+			cfg := getConfig(args[0])
 			repo := initGitConfig(cfg)
-      gitlab := gitlabClient(repo)
+			gitlab := gitlabClient(repo)
 
-      // Push env variables for CI
-      gitlab.gitlabAddOrUpdateVariable(GitlabVar{
-        Name: "CLEYROP_DOMAIN_NAME",
-        Value: cfg.Runtime.VclusterFqdn,
-      })
-      gitlab.gitlabAddOrUpdateVariable(GitlabVar{
-        Name: "KUBE_CONFIG",
-        Value: getKubeConfAsString(cfg),
-      })
+			// Push env variables for CI
+			gitlab.gitlabAddOrUpdateVariable(GitlabVar{
+				Name:  "CLEYROP_DOMAIN_NAME",
+				Value: cfg.Runtime.VclusterFqdn,
+			})
+			gitlab.gitlabAddOrUpdateVariable(GitlabVar{
+				Name:  "KUBE_CONFIG",
+				Value: getKubeConfAsString(cfg),
+			})
 
 			commit, err := gitAddCommitPush(repo)
 
