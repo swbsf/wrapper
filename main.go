@@ -16,7 +16,7 @@ type ApiResponse struct {
 }
 
 func main() {
-	var init bool
+	var noInit bool
 	var switchContext bool
 	var skelBranch string
 	var kubeVersion string
@@ -33,7 +33,7 @@ func main() {
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
       mainConf := getConfig("")
-			_ = validateContext(mainConf)
+			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
@@ -55,8 +55,8 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
       mainConf := getConfig(args[0])
-			kubeconf := validateContext(mainConf)
-      dumpKubeconf(mainConf, kubeconf)
+			// Only validating context here
+			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
@@ -74,7 +74,12 @@ func main() {
 			})
 			hostCfg := hostConfig()
 
+			// Getting the new context
+			kubeconf := getAndValidateContext(mainConf)
 			runContainer(ctx, cli, &cfg, &hostCfg)
+			// hacky way to force new kube context, I'm pretty sure we can find something better
+			kubeconf.CurrentContext = fmt.Sprintf("vcluster_%s_vclusters_%s", mainConf.Runtime.VclusterName, mainConf.Vcluster.HostContextName )
+      dumpKubeconf(mainConf, kubeconf)
 		},
 	}
 	var vclusterDeleteCmd = &cobra.Command{
@@ -83,7 +88,7 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
       mainConf := getConfig(args[0])
-			_ = validateContext(mainConf)
+			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
@@ -108,7 +113,7 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
       mainConf := getConfig(args[0])
-			_ = validateContext(mainConf)
+			_ = getAndValidateContext(mainConf)
 			cli, err := client.NewClientWithOpts(client.FromEnv)
 			if err != nil {
 				panic(err)
@@ -168,7 +173,7 @@ func main() {
 			}
 
 			// Init repo by templating it with copier
-			if init {
+			if ! noInit {
 				config := containerConfig(mainConf, Copier, strslice.StrSlice{
 					"copy",
 					"-f",
@@ -203,7 +208,7 @@ func main() {
       // Push env variables for CI
       gitlab.gitlabAddOrUpdateVariable(GitlabVar{
         Name: "CLEYROP_DOMAIN_NAME",
-        Value: cfg.Vcluster.ChildBaseFqdn,
+        Value: cfg.Runtime.VclusterFqdn,
       })
       gitlab.gitlabAddOrUpdateVariable(GitlabVar{
         Name: "KUBE_CONFIG",
@@ -229,7 +234,7 @@ func main() {
 	rootCmd.AddCommand(repoCmd)
 	rootCmd.AddCommand(hemeraDeployCmd)
 	rootCmd.Flags().BoolVarP(&switchContext, "force-switch", "f", false, "Experimental: Force kube context switch when needed.")
-	repoCmd.Flags().BoolVarP(&init, "init", "i", false, "Should we update branch from skeleton?")
+	repoCmd.Flags().BoolVarP(&noInit, "no-init", "n", false, "Should we disable update branch from skeleton?")
 	repoCmd.PersistentFlags().StringVarP(&skelBranch, "skeleton-branch", "b", "develop", "hemera-skel branch or tag to source from.")
 
 	if err := rootCmd.Execute(); err != nil {

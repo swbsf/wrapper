@@ -28,6 +28,7 @@ type Config struct {
 		VclusterName		 string `yaml:"vclusterName"`
 		SourceFolder     string `yaml:"sourceFolder"`
 		KubeconfPath     string `yaml:"kubeconfPath"`
+		VclusterFqdn     string `yaml:"vclusterFqdn"`
 	} `yaml:"runtime"`
 }
 
@@ -35,6 +36,7 @@ func setRuntimeConfig(cfg *Config, vclusterName string) {
 	cfg.Runtime.VclusterName = vclusterName
 	cfg.Runtime.SourceFolder = cfg.Git.SourceFolder + "/" + vclusterName
 	cfg.Runtime.KubeconfPath = cfg.Git.SourceFolder + "/kube-" + vclusterName + ".yaml"
+	cfg.Runtime.VclusterFqdn = vclusterName + "." + cfg.Vcluster.ChildBaseFqdn
 }
 
 func getConfig(vclusterName string) Config {

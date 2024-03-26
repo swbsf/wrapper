@@ -43,7 +43,7 @@ func switchContext(kubectx string, config api.Config) error {
 	return clientcmd.ModifyConfig(clientcmd.NewDefaultPathOptions(), config, true)
 }
 
-func validateContext(cfg Config) api.Config {
+func getAndValidateContext(cfg Config) api.Config {
 	ctx, kubeconf := getCurrentContext()
 	if !strings.Contains(ctx, cfg.Vcluster.HostContextName) {
 		fmt.Printf("Please use correct kubeconfig: %s instead of %s\n", cfg.Vcluster.HostContextName, ctx)
